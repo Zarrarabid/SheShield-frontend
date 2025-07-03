@@ -1,29 +1,91 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import AuthProvider from "@/components/AuthProvider";
+import { Slot } from "expo-router";
+import { ReactNode, useState, useEffect } from "react";
+import { LogBox, View, Text, StyleSheet, Image } from 'react-native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import * as SplashScreen from 'expo-splash-screen';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
+LogBox.ignoreAllLogs(true);
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+SplashScreen.preventAutoHideAsync();
+
+function CustomSplashScreen() {
+  return (
+    <View style={styles.container}>
+      <Image
+        source={require('@/assets/images/logo.png')} 
+        style={styles.splashImage}
+        resizeMode="contain"
+        onError={(e) => console.log('Splash image loading error:', e.nativeEvent.error)}
+      />
+      <Text style={styles.splashText}>Welcome to the App!</Text>
+      <Text style={styles.splashSubText}>Loading content...</Text>
+    </View>
+  );
+}
+
+
+export default function RootLayout(): ReactNode {
+  const [appIsReady, setAppIsReady] = useState(false);
+  const [fontsLoaded, fontError] = useFonts({
+    'Poppins': require('@/assets/fonts/Poppins-Regular.ttf'),
   });
 
-  if (!loaded) {
-    // Async font loading only occurs in development.
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync();
+
+      const timer = setTimeout(() => {
+        setAppIsReady(true); 
+      }, 2500); 
+
+      return () => clearTimeout(timer);
+    }
+  }, [fontsLoaded, fontError]); 
+
+  if (!fontsLoaded && !fontError) {
     return null;
   }
 
+  if (!appIsReady) {
+    return <CustomSplashScreen />;
+  }
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AuthProvider>
+      <Slot />
+    </AuthProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1, 
+    justifyContent: 'center',
+    alignItems: 'center', 
+    backgroundColor: '#6200EE', 
+  },
+  splashImage: {
+    width: 250, 
+    height: 250, 
+    marginBottom: 30, 
+    borderRadius: 25, 
+  },
+  splashText: {
+    fontSize: 32, 
+    fontWeight: 'bold',
+    color: '#FFFFFF', 
+    fontFamily: 'Poppins', 
+    textShadowColor: 'rgba(0, 0, 0, 0.3)', 
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 5,
+  },
+  splashSubText: {
+    fontSize: 18,
+    color: '#E0E0E0', 
+    marginTop: 10,
+    fontFamily: 'Poppins', 
+  },
+});
+
+
